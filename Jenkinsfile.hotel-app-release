@@ -35,7 +35,7 @@ pipeline {
         script {
           openshift.withCluster() {
             echo "Releasing catalog image version ${releaseTag}"
-            openshift.tag("${openshift.project()}/spring-boot-rest-example:latest", "${openshift.project()}/catalog:${releaseTag}")
+            openshift.tag("${openshift.project()}/spring-boot-rest-example:latest", "${openshift.project()}/spring-boot-rest-example:${releaseTag}")
           }
         }
       }
