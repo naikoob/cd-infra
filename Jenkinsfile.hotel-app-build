@@ -6,6 +6,7 @@ pipeline {
     stage('Build JAR') {
       steps {
         git url: 'https://github.com/naikoob/spring-boot-rest-example.git'
+        sh "cp .settings.xml ~/.m2/settings.xml"
         sh "mvn package"
       }
     }
