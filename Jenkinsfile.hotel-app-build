@@ -1,0 +1,47 @@
+pipeline {
+  agent {
+      label 'maven'
+  }
+  stages {
+    stage('Build JAR') {
+      steps {
+        git url: 'https://github.com/naikoob/spring-boot-rest-example.git'
+        sh "mvn package"
+      }
+    }
+    stage('Archive JAR') {
+      steps {
+        sh "mvn deploy -DskipTests"
+      }
+    }
+    stage('Build Image') {
+      steps {
+        script {
+          openshift.withCluster() {
+            openshift.withProject(env.DEV_PROJECT) {
+              openshift.startBuild("spring-boot-rest-example", "--from-file=target/spring-boot-rest-example-${readMavenPom().version}.jar", "--wait")
+            }
+          }
+        }
+      }
+    }
+    stage('Deploy') {
+      steps {
+        script {
+          openshift.withCluster() {
+            openshift.withProject(env.DEV_PROJECT) {
+              def result, dc = openshift.selector("dc", "spring-boot-rest-example")
+              dc.rollout().latest()
+              timeout(10) {
+                  result = dc.rollout().status("-w")
+              }
+              if (result.status != 0) {
+                  error(result.err)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
