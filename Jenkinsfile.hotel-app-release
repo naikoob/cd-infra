@@ -18,8 +18,7 @@ pipeline {
     }
     stage('Release Code') {
       environment {
-        //SCM_GIT_URL = sh(returnStdout: true, script: 'git config remote.origin.url').trim()
-        SCM_GIT_URL = "https://${env.GITHUB_USERNAME}:${env.GITHUB_PASSWORD}@github.com/${env.GITHUB_USERNAME}/spring-boot-rest-example.git"
+        SCM_GIT_URL = sh(returnStdout: true, script: 'git config remote.origin.url').trim()
       }
       steps {
         script {
