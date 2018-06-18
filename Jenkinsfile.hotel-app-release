@@ -8,8 +8,8 @@ pipeline {
     stage('Prepare') {
       steps {
         git url: 'https://github.com/naikoob/spring-boot-rest-example.git'
-        sh "git config --local user.email 'jenkins@cicd.com'"
-        sh "git config --local user.name 'jenkins'"
+        sh "git config --local user.email 'bookian@gmail.com'"
+        sh "git config --local user.name 'naikoob'"
 
         script {
           releaseTag = readMavenPom().getVersion().replace("-SNAPSHOT", "")
@@ -18,7 +18,8 @@ pipeline {
     }
     stage('Release Code') {
       environment {
-        SCM_GIT_URL = sh(returnStdout: true, script: 'git config remote.origin.url').trim()
+        //SCM_GIT_URL = sh(returnStdout: true, script: 'git config remote.origin.url').trim()
+        SCM_GIT_URL = "https://${env.GITHUB_USERNAME}:${env.GITHUB_PASSWORD}@github.com/${env.GITHUB_USERNAME}/spring-boot-rest-example.git"
       }
       steps {
         script {
