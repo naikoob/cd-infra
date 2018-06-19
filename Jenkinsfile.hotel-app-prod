@@ -10,6 +10,7 @@ pipeline {
         script {
           openshift.withCluster() {
             namespace = openshift.project()
+            withCredentials([usernamePassword(credentialsId: "${openshift.project()}-github-credentials", usernameVariable: "GITHUB_USERNAME", passwordVariable: "GITHUB_PASSWORD")])
             def tags = openshift.selector("istag").objects().collect { it.metadata.name }.findAll { it.startsWith 'spring-boot-rest-example:' }.collect { it.replaceAll(/spring-boot-rest-example:(.*)/, "\$1") }.sort()
             timeout(5) {
               releaseTag = input(
@@ -20,6 +21,32 @@ pipeline {
                 ]
               )
             }
+          }
+        }
+      }
+    }
+  }
+  post {
+    aborted {
+      script {
+        openshift.withCluster(prodCluster, prodToken) {
+          openshift.withProject(env.PROD_PROJECT) {
+            echo "Rolling back to current release ${activeSvc} and deleting the canary"
+            openshift.set("route-backends", "spring-boot-rest-example", "${activeSvc}=100%")
+            openshift.selector("dc", "${canarySvc}").delete()
+            openshift.selector("svc", "${canarySvc}").delete()
+          }
+        }
+      }
+    }
+    failure {
+      script {
+        openshift.withCluster(prodCluster, prodToken) {
+          openshift.withProject(env.PROD_PROJECT) {
+            echo "Rolling back to current release ${activeSvc} and deleting the canary"
+            openshift.set("route-backends", "spring-boot-rest-example", "${activeSvc}=100%")
+            openshift.selector("dc", "${canarySvc}").delete()
+            openshift.selector("svc", "${canarySvc}").delete()
           }
         }
       }
