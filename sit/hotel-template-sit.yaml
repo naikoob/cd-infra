@@ -1,0 +1,310 @@
+apiVersion: v1
+kind: Template
+metadata:
+  creationTimestamp: null
+  name: hotel-sit
+objects:
+- apiVersion: v1
+  data:
+    application.yml: "### This is the main way to configure the application (other
+      than annotations).\n### This file is in Yaml format but you can also configure
+      spring boot using the traditional\n### Java properties file format. \n\nspring.jmx:\n
+      \  enabled: false\n\nspring.datasource:\n    driverClassName: com.mysql.jdbc.Driver\n
+      \   url: jdbc:mysql://mysql.spring-boot-sit.svc:3306/hoteldb\n    username:
+      ${DB_USERNAME}\n    password: ${DB_PASSWORD}\n\nspring.jpa.hibernate:\n    ddl-auto: update\n\nspring.jpa.properties.hibernate.dialect:
+      org.hibernate.dialect.MySQL5Dialect\n\nserver:\n  port: 8080\n\n#todo: make
+      sure to always enable security in production\nsecurity:\n  basic:\n    enabled:
+      false\n\n#management endpoints on a separate port\nmanagement:\n  port: 8081\n
+      \ security:\n    enabled: false # management port is internal only. no need
+      to secure it.\n\n#default project info followed by actual injected pom-specified
+      values.\nproject:\n  name: spring-boot-rest-example\n  version: 0.1\n  description:
+      boot-example default description\ninfo:\n  build:\n    artifact: ${project.artifactId}\n
+      \   name: ${project.name}\n    description: ${project.description}\n    version:
+      ${project.version}\n\nhotel.service:\n  name: 'default profile:'\n\n\n "
+  kind: ConfigMap
+  metadata:
+    creationTimestamp: null
+    name: spring-boot-rest-example
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      template.alpha.openshift.io/wait-for-ready: "true"
+    creationTimestamp: null
+    generation: 1
+    labels:
+      app: spring-boot-rest-example
+    name: mysql
+  spec:
+    replicas: 1
+    selector:
+      name: mysql
+    strategy:
+      activeDeadlineSeconds: 21600
+      recreateParams:
+        timeoutSeconds: 600
+      resources: {}
+      type: Recreate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: mysql
+      spec:
+        containers:
+        - env:
+          - name: MYSQL_USER
+            value: ${DB_USERNAME}
+          - name: MYSQL_PASSWORD
+            value: ${DB_PASSWORD}
+          - name: MYSQL_ROOT_PASSWORD
+            value: ${DB_PASSWORD}
+          - name: MYSQL_DATABASE
+            value: hoteldb
+          image: registry.access.redhat.com/rhscl/mysql-57-rhel7
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 3306
+            timeoutSeconds: 1
+          name: mysql
+          ports:
+          - containerPort: 3306
+            protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - -i
+              - -c
+              - MYSQL_PWD="$MYSQL_PASSWORD" mysql -h 127.0.0.1 -u $MYSQL_USER -D $MYSQL_DATABASE
+                -e 'SELECT 1'
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              memory: 512Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/lib/mysql/data
+            name: mysql-data
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - emptyDir:
+            medium: ""
+          name: mysql-data
+    test: false
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - mysql
+        from:
+          kind: ImageStreamTag
+          name: mysql:5.7
+          namespace: openshift
+      type: ImageChange
+    - type: ConfigChange
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    creationTimestamp: null
+    generation: 1
+    labels:
+      app: spring-boot-rest-example
+    name: spring-boot-rest-example
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      app: spring-boot-rest-example
+      deploymentconfig: spring-boot-rest-example
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        annotations:
+          openshift.io/generated-by: OpenShiftNewApp
+        creationTimestamp: null
+        labels:
+          app: spring-boot-rest-example
+          deploymentconfig: spring-boot-rest-example
+      spec:
+        containers:
+        - env:
+          - name: SPRING_CONFIG_LOCATION
+            value: /app-config/application.yml
+          image: spring-boot-rest-example
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: spring-boot-rest-example
+          ports:
+          - containerPort: 8443
+            protocol: TCP
+          - containerPort: 8778
+            protocol: TCP
+          - containerPort: 8080
+            protocol: TCP
+          - containerPort: 8081
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /app-config
+            name: volume-g9ods
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: spring-boot-rest-example
+          name: volume-g9ods
+    test: false
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - spring-boot-rest-example
+        from:
+          kind: ImageStreamTag
+          name: spring-boot-rest-example:${IMAGE_VERSION}
+          namespace: ${IMAGE_NAMESPACE}
+      type: ImageChange
+    - type: ConfigChange
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      template.openshift.io/expose-uri: mysql://{.spec.clusterIP}:{.spec.ports[?(.name=="mysql")].port}
+    creationTimestamp: null
+    labels:
+      template: mysql-persistent-template
+    name: mysql
+  spec:
+    ports:
+    - name: mysql
+      port: 3306
+      protocol: TCP
+      targetPort: 3306
+    selector:
+      name: mysql
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: spring-boot-rest-example
+    name: spring-boot-rest-example
+  spec:
+    ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    - name: 8081-tcp
+      port: 8081
+      protocol: TCP
+      targetPort: 8081
+    - name: 8443-tcp
+      port: 8443
+      protocol: TCP
+      targetPort: 8443
+    - name: 8778-tcp
+      port: 8778
+      protocol: TCP
+      targetPort: 8778
+    selector:
+      app: spring-boot-rest-example
+      deploymentconfig: spring-boot-rest-example
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    annotations:
+      openshift.io/host.generated: "true"
+    creationTimestamp: null
+    labels:
+      app: spring-boot-rest-example
+    name: spring-boot-rest-example
+  spec:
+    host: spring-boot-rest-example-spring-boot-sit.apps.paas.bylo.de
+    port:
+      targetPort: 8080-tcp
+    to:
+      kind: Service
+      name: spring-boot-rest-example
+      weight: 100
+    wildcardPolicy: None
+parameters:
+- displayName: Image Version
+  description: Image version to deploy
+  name: IMAGE_VERSION
+  required: true
+  value: latest
+- displayName: Image Namespace
+  description: The namespaces that contains the catalog and web images
+  name: IMAGE_NAMESPACE
+  required: true
+  value: cicd
+- description: Database user name
+  displayName: Database Username
+  from: user[a-zA-Z0-9]{3}
+  generate: expression
+  name: DB_USERNAME
+  required: true
+- description: Database user password
+  displayName: Database Password
+  from: '[a-zA-Z0-9]{8}'
+  generate: expression
+  name: DB_PASSWORD
+  required: true
