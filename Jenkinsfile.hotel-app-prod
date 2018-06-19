@@ -82,6 +82,7 @@ pipeline {
             openshift.set("route-backends", "spring-boot-rest-example", "${activeSvc}=100%")
             openshift.selector("dc", "${canarySvc}").delete()
             openshift.selector("svc", "${canarySvc}").delete()
+            openshift.selector("hpa", "${canarySvc}").delete()
           }
         }
       }
@@ -94,6 +95,7 @@ pipeline {
             openshift.set("route-backends", "spring-boot-rest-example", "${activeSvc}=100%")
             openshift.selector("dc", "${canarySvc}").delete()
             openshift.selector("svc", "${canarySvc}").delete()
+            openshift.selector("hpa", "${canarySvc}").delete()
           }
         }
       }
