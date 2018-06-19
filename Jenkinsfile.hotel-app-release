@@ -40,5 +40,31 @@ pipeline {
         }
       }
     }
+    stage('Tear-down SIT') {
+      steps {
+        script {
+          openshift.withCluster() {
+            openshift.withProject(env.SIT_PROJECT) {
+              openshift.raw('delete all,cm,pvc --all')
+            }
+          }
+        }
+      }
+    }
+    stage('Deploy SIT') {
+      steps {
+        script {
+          openshift.withCluster() {
+            def imageNamespace = openshift.project()
+            openshift.withProject(env.SIT) {
+              def template = 'https://raw.githubusercontent.com/naikoob/cd-infra/master/sit/hotel-template-sit.yaml'
+              openshift.apply(
+                openshift.process("-f", template, "-p", "IMAGE_VERSION=${releaseTag}", "-p", "IMAGE_NAMESPACE=${imageNamespace}")
+              )
+            }
+          }
+        }
+      }
+    }
   }
 }
