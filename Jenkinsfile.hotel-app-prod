@@ -1,0 +1,29 @@
+def releaseTag
+
+pipeline {
+  agent {
+      label 'openshift'
+  }
+
+  stages {
+    stage('Choose Release Version') {
+      steps {
+        script {
+          openshift.withCluster() {
+            namespace = openshift.project()
+            def tags = openshift.selector("istag").objects().collect { it.metadata.name }.findAll { it.startsWith 'spring-boot-rest-example:' }.collect { it.replaceAll(/spring-boot-rest-example:(.*)/, "\$1") }.sort()
+            timeout(5) {
+              releaseTag = input(
+                ok: "Deploy",
+                message: "Enter release version to promote to PROD",
+                parameters: [
+                  choice(choices: tags.join('\n'), description: '', name: 'Release Version')
+                ]
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+}
