@@ -35,10 +35,6 @@ objects:
         - image: spring-boot-rest-example
           imagePullPolicy: Always
           name: ${APP_NAME}
-          envFrom:
-          - secretRef:
-              name: spring-boot-rest-example-mysql-credentials
-            prefix: APB_
           ports:
           - containerPort: 8778
             name: jolokia

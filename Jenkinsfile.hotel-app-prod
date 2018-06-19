@@ -43,6 +43,35 @@ pipeline {
         }
       }
     }
+    stage('Grow Canary 50%') {
+      steps {
+        timeout(time:15, unit:'MINUTES') {
+            input message: "Send 50% of live traffic to new release?", ok: "Approve"
+        }
+        script {
+          openshift.withCluster() {
+            openshift.withProject(env.PROD_PROJECT) {
+              openshift.set("route-backends", "spring-boot-rest-example", "${activeSvc}=50%", "${canarySvc}=50%")
+            }
+          }
+        }
+      }
+    }
+    stage('Rollout 100%') {
+      steps {
+        timeout(time:15, unit:'MINUTES') {
+            input message: "Send 100% of live traffic to the new release?", ok: "Approve"
+        }
+        script {
+          openshift.withCluster() {
+            openshift.withProject(env.PROD_PROJECT) {
+              openshift.set("route-backends", "spring-boot-rest-example", "${canarySvc}=100%")
+              openshift.selector(["dc/${activeSvc}", "svc/${activeSvc}"]).delete()
+            }
+          }
+        }
+      }
+    }
   }
   post {
     aborted {
