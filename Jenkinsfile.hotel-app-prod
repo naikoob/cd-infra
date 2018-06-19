@@ -1,10 +1,9 @@
-def releaseTag
+def namespace, releaseTag, activeSvc, canarySvc
 
 pipeline {
   agent {
-      label 'openshift'
+      label 'skopeo'
   }
-
   stages {
     stage('Choose Release Version') {
       steps {
