@@ -2,7 +2,7 @@ def namespace, releaseTag, prodCluster, prodToken, activeSvc, canarySvc
 
 pipeline {
   agent {
-      label 'skopeo'
+      label 'maven'
   }
   stages {
     stage('Choose Release Version') {
