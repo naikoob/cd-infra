@@ -24,6 +24,25 @@ pipeline {
         }
       }
     }
+    stage('Deploy Canary 10%') {
+      steps {
+        script {
+          openshift.withCluster() {
+            openshift.withProject(env.PROD_PROJECT) {
+              activeSvc = openshift.selector("route", "spring-boot-rest-example").object().spec.to.name
+              def suffix = (activeSvc ==~ /spring-boot-rest-example-(\d+)/) ? (activeSvc.replaceAll(/spring-boot-rest-example-(\d+)/, '$1') as int) + 1 : "1"
+              canarySvc = "spring-boot-rest-example-${suffix}"
+
+              def template = 'https://raw.githubusercontent.com/naikoob/cd-infra/master/prod/hotel-app-deployment-template.yaml'
+              openshift.apply(
+                openshift.process("-f", template, "-p", "IMAGE_VERSION=${releaseTag}", "-p", "APP_NAME=${canarySvc}", "-p", "IMAGE_NAMESPACE=", "-l", "deployment=${canarySvc}")
+              )
+              openshift.set("route-backends", "spring-boot-rest-example", "${activeSvc}=90%", "${canarySvc}=10%")
+            }
+          }
+        }
+      }
+    }
   }
   post {
     aborted {
