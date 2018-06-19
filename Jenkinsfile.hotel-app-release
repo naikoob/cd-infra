@@ -56,7 +56,7 @@ pipeline {
         script {
           openshift.withCluster() {
             def imageNamespace = openshift.project()
-            openshift.withProject(env.SIT) {
+            openshift.withProject(env.SIT_PROJECT) {
               def template = 'https://raw.githubusercontent.com/naikoob/cd-infra/master/sit/hotel-template-sit.yaml'
               openshift.apply(
                 openshift.process("-f", template, "-p", "IMAGE_VERSION=${releaseTag}", "-p", "IMAGE_NAMESPACE=${imageNamespace}")
