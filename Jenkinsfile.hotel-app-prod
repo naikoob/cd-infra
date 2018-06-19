@@ -10,10 +10,6 @@ pipeline {
         script {
           openshift.withCluster() {
             namespace = openshift.project()
-            prodCluster = env.PROD_MASTER.replace("https://","insecure://")
-            withCredentials([usernamePassword(credentialsId: "${namespace}-prod-credentials", usernameVariable: "PROD_USER", passwordVariable: "PROD_TOKEN")]) {
-              prodToken = env.PROD_TOKEN
-            }
             def tags = openshift.selector("istag").objects().collect { it.metadata.name }.findAll { it.startsWith 'spring-boot-rest-example:' }.collect { it.replaceAll(/spring-boot-rest-example:(.*)/, "\$1") }.sort()
             timeout(5) {
               releaseTag = input(
