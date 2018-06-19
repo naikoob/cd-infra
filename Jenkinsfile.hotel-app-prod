@@ -35,7 +35,7 @@ pipeline {
 
               def template = 'https://raw.githubusercontent.com/naikoob/cd-infra/master/prod/hotel-app-deployment-template.yaml'
               openshift.apply(
-                openshift.process("-f", template, "-p", "IMAGE_VERSION=${releaseTag}", "-p", "APP_NAME=${canarySvc}", "-p", "IMAGE_NAMESPACE=", "-l", "deployment=${canarySvc}")
+                openshift.process("-f", template, "-p", "IMAGE_VERSION=${releaseTag}", "-p", "APP_NAME=${canarySvc}", "-p", "IMAGE_NAMESPACE=cicd", "-l", "deployment=${canarySvc}")
               )
               openshift.set("route-backends", "spring-boot-rest-example", "${activeSvc}=90%", "${canarySvc}=10%")
             }
@@ -47,7 +47,7 @@ pipeline {
   post {
     aborted {
       script {
-        openshift.withCluster(prodCluster, prodToken) {
+        openshift.withCluster() {
           openshift.withProject(env.PROD_PROJECT) {
             echo "Rolling back to current release ${activeSvc} and deleting the canary"
             openshift.set("route-backends", "spring-boot-rest-example", "${activeSvc}=100%")
@@ -59,7 +59,7 @@ pipeline {
     }
     failure {
       script {
-        openshift.withCluster(prodCluster, prodToken) {
+        openshift.withCluster() {
           openshift.withProject(env.PROD_PROJECT) {
             echo "Rolling back to current release ${activeSvc} and deleting the canary"
             openshift.set("route-backends", "spring-boot-rest-example", "${activeSvc}=100%")
