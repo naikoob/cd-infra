@@ -32,7 +32,10 @@ objects:
         name: ${APP_NAME}
       spec:
         containers:
-        - image: spring-boot-rest-example
+        - env:
+            - name: SPRING_CONFIG_LOCATION
+              value: /app-config/application.yml
+          image: spring-boot-rest-example
           imagePullPolicy: Always
           name: ${APP_NAME}
           ports:
@@ -70,10 +73,18 @@ objects:
               cpu: 200m
               memory: 384Mi
           terminationMessagePath: /dev/termination-log
-        dnsPolicy: ClusterFirst
+          volumeMounts:
+            - mountPath: /app-config
+              name: config-vol0
+          dnsPolicy: ClusterFirst
         restartPolicy: Always
         securityContext: {}
         terminationGracePeriodSeconds: 75
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: spring-boot-rest-example
+          name: config-vol0
     triggers:
     - imageChangeParams:
         automatic: true
