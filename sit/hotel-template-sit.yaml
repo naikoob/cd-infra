@@ -277,7 +277,6 @@ objects:
       app: spring-boot-rest-example
     name: spring-boot-rest-example
   spec:
-    host: spring-boot-rest-example-spring-boot-sit.apps.paas.bylo.de
     port:
       targetPort: 8080-tcp
     to:
